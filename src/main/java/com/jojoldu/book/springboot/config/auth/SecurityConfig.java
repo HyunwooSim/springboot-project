@@ -1,10 +1,18 @@
 package com.jojoldu.book.springboot.config.auth;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jojoldu.book.springboot.domain.user.Role;
+import com.jojoldu.book.springboot.exception.ErrorResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.web.AuthenticationEntryPoint;
+import org.springframework.security.web.access.AccessDeniedHandler;
+
+import java.io.PrintWriter;
 
 @RequiredArgsConstructor
 @EnableWebSecurity
@@ -21,6 +29,10 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                 .antMatchers("/api/v1/**").hasRole(Role.USER.name())//"/api/v1/**" 주소를 가진 API는 USER 권한을 가진 사람만 가능하도록 했습니다.
                 .anyRequest().authenticated()//anyRequest()설정된 값들이외 나머지 url    authenticated(): 나머지 urlㄷ들은 로그인한사용자에게만 허용
                 .and()
+                .exceptionHandling()
+                .accessDeniedHandler(accessDeniedHandler)
+                .authenticationEntryPoint(unauthorizedEntryPoint)
+                .and()
                 .logout()
                 .logoutSuccessUrl("/")//로그아웃 기능에 대한 설정의 진입점 / 로그아웃 성공시 "/"주소로 이동
                 .and()
@@ -28,4 +40,28 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                 .userInfoEndpoint()//OAuth2 로그인 성공 이후 사용자 정보를 가져올때의 설정을 담당
                 .userService(customOAuth2UserService);//소셜 로그인 성공 시 후속조치를 진행할 UserService 인터페이싀의 구현체를 등록
     }
+
+    private final AuthenticationEntryPoint unauthorizedEntryPoint =
+            (request, response, authException) -> {
+                ErrorResponse fail = new ErrorResponse(HttpStatus.UNAUTHORIZED, "Spring security unauthorized...");
+                response.setStatus(HttpStatus.UNAUTHORIZED.value());
+                String json = new ObjectMapper().writeValueAsString(fail);
+                response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+                PrintWriter writer = response.getWriter();
+                writer.write(json);
+                writer.flush();
+            };
+
+    private final AccessDeniedHandler accessDeniedHandler =
+            (request, response, accessDeniedException) -> {
+                ErrorResponse fail = new ErrorResponse(HttpStatus.UNAUTHORIZED, "Spring security unauthorized...");
+                response.setStatus(HttpStatus.FORBIDDEN.value());
+                String json = new ObjectMapper().writeValueAsString(fail);
+                response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+                PrintWriter writer = response.getWriter();
+                writer.write(json);
+                writer.flush();
+            };
+
+
 }

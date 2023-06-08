@@ -3,3 +3,6 @@
 .gradle
 .idea
 application-oauth.properties
+out/
+!**/src/main/**/out/
+!**/src/test/**/out/
